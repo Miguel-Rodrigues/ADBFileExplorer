@@ -56,6 +56,10 @@ class FileRepository:
             return None, "No device selected!"
 
         path = AndroidADBManager.path()
+        return cls.files_in_path(path)
+
+    @classmethod
+    def files_in_path(cls, path: str) -> (List[File], str):
         args = adb.ShellCommand.LS_ALL_LIST + [path.replace(' ', r'\ ')]
         response = adb.shell(AndroidADBManager.get_device().id, args)
         if not response.IsSuccessful and response.ExitCode != 1:
@@ -92,7 +96,7 @@ class FileRepository:
         return f"{'Folder' if file.isdir else 'File'} '{file.path}' has been deleted", None
 
     @classmethod
-    def download(cls, progress_callback: callable, source: str) -> (str, str):
+    def download(cls, progress_callback: callable, source: File) -> (str, str):
         destination = Defaults.device_downloads_path(AndroidADBManager.get_device())
         return cls.download_to(progress_callback, source, destination)
 
@@ -110,10 +114,10 @@ class FileRepository:
                 self.messages.append(data)
 
     @classmethod
-    def download_to(cls, progress_callback: callable, source: str, destination: str) -> (str, str):
+    def download_to(cls, progress_callback: callable, source: File, destination: str) -> (str, str):
         if AndroidADBManager.get_device() and source and destination:
             helper = cls.UpDownHelper(progress_callback)
-            response = adb.pull(AndroidADBManager.get_device().id, source, destination, helper.call)
+            response = adb.pull(AndroidADBManager.get_device().id, source.path, destination, helper.call)
             if not response.IsSuccessful:
                 return None, response.ErrorData or "\n".join(helper.messages)
 

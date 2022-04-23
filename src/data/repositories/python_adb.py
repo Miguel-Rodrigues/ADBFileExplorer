@@ -71,6 +71,16 @@ class FileRepository:
         files = []
         try:
             path = PythonADBManager.path()
+            return cls.files_in_path(path)
+
+        except BaseException as error:
+            logging.error(f"Unexpected {error=}, {type(error)=}")
+            return files, error
+
+    @classmethod
+    def files_in_path(cls, path: str) -> (List[File], str):
+        files = []
+        try:
             response = PythonADBManager.device.list(path)
 
             args = ShellCommand.LS_ALL_DIRS + [path.replace(' ', r'\ ') + "*/"]
@@ -142,7 +152,7 @@ class FileRepository:
             return None, error
 
     @classmethod
-    def download(cls, progress_callback: callable, source: str) -> (str, str):
+    def download(cls, progress_callback: callable, source: File) -> (str, str):
         destination = Defaults.device_downloads_path(PythonADBManager.get_device())
         return cls.download_to(progress_callback, source, destination)
 
@@ -161,20 +171,31 @@ class FileRepository:
             self.callback(path, int(self.written / self.total * 100))
 
     @classmethod
-    def download_to(cls, progress_callback: callable, source: str, destination: str) -> (str, str):
-        helper = cls.UpDownHelper(progress_callback)
-        destination = os.path.join(destination, os.path.basename(os.path.normpath(source)))
+    def download_to(cls, progress_callback: callable, source: File, destination: str) -> (str, str):
         if PythonADBManager.device and PythonADBManager.device.available and source:
             try:
-                PythonADBManager.device.pull(
-                    device_path=source,
-                    local_path=destination,
-                    progress_callback=helper.call
-                )
+                helper = cls.UpDownHelper(progress_callback)
+                destination = os.path.join(destination, os.path.basename(os.path.normpath(source.path)))
+                
+                if (source.type == FileType.DIRECTORY):
+                    os.mkdir(destination)
+                    (files, error) = cls.files_in_path(source.path + "/")
+                    if (not error):
+                        for file in files:
+                            cls.download_to(callable, file, destination) 
+
+                elif (source.type == FileType.FILE):
+                    PythonADBManager.device.pull(
+                        device_path=source.path,
+                        local_path=destination,
+                        progress_callback=helper.call
+                    )
+
                 return f"Download successful!\nDest: {destination}", None
             except BaseException as error:
                 logging.error(f"Unexpected {error=}, {type(error)=}")
                 return None, error
+
         return None, None
 
     @classmethod

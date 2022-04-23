@@ -427,7 +427,7 @@ class FileExplorerWidget(QWidget):
             name="Download",
             repository_method=FileRepository.download,
             response_callback=self.default_response,
-            arguments=(helper.progress_callback.emit, self.file.path)
+            arguments=(helper.progress_callback.emit, self.file)
         )
         if Adb.worker().work(worker):
             Global().communicate.notification.emit(
@@ -450,7 +450,7 @@ class FileExplorerWidget(QWidget):
                 repository_method=FileRepository.download_to,
                 response_callback=self.default_response,
                 arguments=(
-                    helper.progress_callback.emit, self.file.path, dir_name
+                    helper.progress_callback.emit, self.file, dir_name
                 )
             )
             if Adb.worker().work(worker):
